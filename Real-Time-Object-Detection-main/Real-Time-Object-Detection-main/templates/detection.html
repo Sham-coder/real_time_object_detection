@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Object Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <script>
+        let streaming = false;
+        let videoElement;
+        let startButton;
+        let stopButton;
+        let logoutButton;
+        let videoFeed;
+
+        async function fetchDetectedObjects() {
+            try {
+                const response = await fetch("{{ url_for('detected_objects') }}");
+                const data = await response.json();
+                const list = document.getElementById('detectedObjectsList');
+                list.innerHTML = '';
+                if (data.objects.length === 0) {
+                    list.innerHTML = '<li>No objects detected</li>';
+                } else {
+                    data.objects.forEach(obj => {
+                        const li = document.createElement('li');
+                        li.textContent = obj;
+                        list.appendChild(li);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching detected objects:', error);
+            }
+        }
+
+        function startDetection() {
+            if (!streaming) {
+                videoFeed.src = "{{ url_for('video_feed') }}";
+                streaming = true;
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                // Start polling detected objects
+                fetchDetectedObjects();
+                window.detectedObjectsInterval = setInterval(fetchDetectedObjects, 1000);
+            }
+        }
+
+        function stopDetection() {
+            if (streaming) {
+                videoFeed.src = "";
+                streaming = false;
+                startButton.disabled = false;
+                stopButton.disabled = true;
+                // Stop polling detected objects
+                clearInterval(window.detectedObjectsInterval);
+                const list = document.getElementById('detectedObjectsList');
+                list.innerHTML = '';
+            }
+        }
+
+        function logout() {
+            window.location.href = "{{ url_for('logout') }}";
+        }
+
+        window.onload = function() {
+            videoFeed = document.getElementById('videoFeed');
+            startButton = document.getElementById('startBtn');
+            stopButton = document.getElementById('stopBtn');
+            logoutButton = document.getElementById('logoutBtn');
+            stopButton.disabled = true;
+        }
+    </script>
+</head>
+<body>
+    <div class="detection-container">
+        <div class="sidebar">
+            <h3>Detected Objects</h3>
+            <ul id="detectedObjectsList">
+                <!-- Detected objects will be listed here -->
+            </ul>
+        </div>
+        <div class="main-content">
+            <h1>Object Detection</h1>
+            <div class="button-group">
+                <button id="startBtn" onclick="startDetection()">Start</button>
+                <button id="stopBtn" onclick="stopDetection()">Stop</button>
+                <button id="logoutBtn" onclick="logout()">Logout</button>
+            </div>
+            <div class="video-container">
+                <img id="videoFeed" src="" alt="Video Feed" />
+            </div>
+        </div>
+    </div>
+</body>
+</html>
